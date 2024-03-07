@@ -1,0 +1,11 @@
+.env
+/.vscode
+/.github
+/.next
+/.yarn
+
+/out
+/devlink
+/package-lock.json
+/package.json
+/src/gql

@@ -143,7 +143,7 @@ export async function POST(req: Request) {
       for (const message of responseMessages) {
         sendMessage({
           id: message.id,
-          role: 'assistant',
+          role: 'assistant', // WealthComplAI
           content: message.content.filter(
             content => content.type === 'text',
           ) as Array<MessageContentText>,
