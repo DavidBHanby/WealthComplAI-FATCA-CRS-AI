@@ -1,161 +1,295 @@
 'use client';
 
-import { Message, experimental_useAssistant as useAssistant } from 'ai/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import OpenAI from 'openai';
 
-import Markdown from 'marked-react';
+import { ClassifyPage } from '@/devlink';
 
-import { Libre_Baskerville } from 'next/font/google';
-
-
-import { HomePage } from '@/devlink';
-
-
-
-const libreBaskerville = Libre_Baskerville({
-  subsets: ['latin'],
-  weight: '400',
+// Create an OpenAI API client (that's edge friendly!)
+const openai = new OpenAI({
+  apiKey: "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" || '',
+  dangerouslyAllowBrowser: true
 });
 
-const roleToColorMap: Record<Message['role'], string> = {
-  system: 'red',
-  user: 'purple',
-  function: 'blue',
-  tool: 'green',
-  assistant: 'black',
-  data: 'orange',
-};
+// IMPORTANT! Set the runtime to edge
+export const runtime = 'edge';
 
-const loadingMessages = [
-  "Reviewing provided information...",
+export default function FATCAForm() {
+  const [entityInfo, setEntityInfo] = useState('');
 
-  "Considering all relevant international regulations...",
+  const [classification, setClassification] = useState('');
+  const [confidenceRating, setConfidenceRating] = useState('');
+  const [rationaleForConfidenceRating, setRationaleForConfidenceRating] = useState('');
+  const [rationaleForClassification, setRationaleForClassification] = useState('');
+  const [additionalInformationRequired, setAdditionalInformationRequired] = useState('');
 
-  "Let's ensure you're covered everywhere.",
-
-  "Delving into the FATCA/CRS regulations...",
-
-  "Parsing intricate details of compliance laws...",
-
-  "Cross-referencing entity data with current compliance standards...",
-
-  "Comparing entity information against up-to-date regulatory requirements...",
-
-  "Evaluating entity structure...",
-
-  "Considering the latest amendments to the regulations...",
-
-  "Developing classification rationale...",
-
-  "Further analysing financial activities and relationships...",
-
-  "Preparing actionable insights and recommendations...",
-
-  "Finalizing report to provide bespoke compliance roadmap..."
-]
-
-export default function Chat() {
-  const [loadingMessageId, setLoadingMessageId] = useState(0)
-
-  const { status, messages, input, submitMessage, handleInputChange, error } =
-    useAssistant({
-      api: '/api/assistant',
-    });
-
-  // When status changes to accepting messages, focus the input:
-  const textareaRef = useRef<HTMLTextAreaElement>(null); // Create a ref using useRef
-  useEffect(() => {
-    if (status === 'awaiting_message') {
-      textareaRef.current?.focus();
-    }
-  }, [status]);
-
-  const focusTextarea = () => {
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  };
-
-  const showLoadingMessages = () => {
-    const id = setInterval(() => setLoadingMessageId((oldCount) => oldCount + 1), 1500);
-    console.log(loadingMessageId, " - inside", loadingMessages.length)
-
-    return () => {
-      clearInterval(id);
-    };
-  }
+  let accumulatedData = '';
 
   // useEffect(() => {
-  //   const id = setInterval(() => setLoadingMessageId((oldCount) => oldCount + 1), 1500);
-  //   console.log(loadingMessageId, " - inside", loadingMessages.length)
+  // const printStateVariablesInterval = setInterval(() => {
+  //   console.log(
+  //     additionalInformationRequired === '' ?
+  //       'accumulatedData' + accumulatedData :
+  //       'Classification:', classification,
+  //     'Confidence Rating:', confidenceRating,
+  //     'Rationale for Confidence Rating:', rationaleForConfidenceRating,
+  //     'Rationale for Classification:', rationaleForClassification,
+  //     'Additional Information Required:', additionalInformationRequired)
+  // }, 5000);
 
-  //   return () => {
-  //     clearInterval(id);
-  //   };
+  //   return () => clearInterval(printStateVariablesInterval)
   // }, []);
 
-  messages.map((m: Message) => (console.log(m.content)))
+  async function fetchAndProcessStream(prompt: string) {
+
+    try {
+      const stream = await openai.chat.completions.create({
+        model: 'gpt-4-turbo-preview',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { "type": "json_object" },
+        stream: true,
+      });
+
+      for await (const chunk of stream) {
+        const chunkContent = chunk.choices[0]?.delta?.content || '';
+        //console.log(chunkContent);
+        accumulatedData += chunkContent;
+
+        try {
+          // Attempt to extract and update variables with complete fields as they become available
+
+          // ({ accumulatedData } =
+          extractFields(accumulatedData)
+
+        } catch (error) {
+          // Handle JSON parsing errors, which are expected for partial data
+          // You might not need to do anything here if errors are solely due to partial JSON
+          console.error('Parsing error, possibly due to partial data. Waiting for more data...');
+        }
+      }
+
+      // Once streaming is complete, or as data is processed, you can use the variables as needed
+      // clearInterval(saveFieldDataToStateInterval)
+
+      console.log(accumulatedData)
+
+      console.log(
+        'Classification:', classification,
+        'Confidence Rating:', confidenceRating,
+        'Rationale for Confidence Rating:', rationaleForConfidenceRating,
+        'Rationale for Classification:', rationaleForClassification,
+        'Additional Information Required:', additionalInformationRequired
+      )
+
+    } catch (error) {
+      console.error('Error with streaming:', error);
+    }
+
+    // return () => setTimeout(() => {
+    //   clearInterval(saveFieldDataToStateInterval);
+    // }, 2000);
+
+  }
+
+  //   function extractFields(data: string, fields: { classification: any; confidenceRating: any; rationaleForConfidence: any; rationaleForClassification: any; additionalInfo: any; }) {
+  function extractFields(data: string) {
+
+    // Function to find and extract a field's value from the data string
+    const findAndExtractField = (fieldName: string, dataString: string) => {
+      // Regex pattern to match the field name and its complete value, regardless of type
+      // This pattern captures:
+      // - Quoted field names
+      // - Followed by optional spaces, a colon, and optional spaces
+      // - The field value, which can be a quoted string, number, object, array, true, false, or null
+      const regexPattern = new RegExp(`"${fieldName}"\\s*:\\s*((".*?"|\\d+(\\.\\d+)?|true|false|null|\\[.*?\\]|\\{.*?\\}))\\s*(,|}$)`, 's');
+      const match = regexPattern.exec(dataString);
+
+      if (match && match[1]) {
+        // Extracted value
+        let value = match[1].trim();
+
+        // Attempt to parse the extracted value to handle strings, numbers, booleans, nulls, arrays, and objects
+        try {
+          value = JSON.parse(value);
+        } catch (e) {
+          // If parsing fails, it could be due to malformed JSON or incomplete streaming. Since we're focusing on complete data, this case should be rare.
+          console.error('Failed to parse field value:', e);
+          return { value: null, newData: dataString };
+        }
+
+        // Remove the matched portion from the data string to avoid reprocessing
+        const newData = dataString.substring(0, match.index) + dataString.substring(match.index + match[0].length);
+
+        return { value, newData };
+      }
+
+      // If no complete field is found, return null value and original data
+      return { value: null, newData: dataString };
+    }
+
+
+    //   // const regexPattern = new RegExp(`"${fieldName}"\\s*:\\s*(.*?)(,\\s*"[^"]+"\\s*:|}$)`, 's');
+    //   const regexPattern = new RegExp(`"${fieldName}"\\s*:\\s*((?:".*?"|\\d+|\\[.*?\\]|\\{.*?\\})\\b)(,\\s*"?[^"]+"\\s*:|}$)`, 's');
+    //   const match = regexPattern.exec(dataString);
+
+    //   if (match && match[1]) {
+    //     console.log("match = ", match)
+    //     // Remove the matched field from the data string
+    //     const newValue = dataString.replace(match[0], '');
+    //     // Try to parse the value if it looks like an object or an array
+    //     try {
+    //       const parsedValue = JSON.parse(match[1]);
+    //       return { value: parsedValue, newData: newValue };
+    //     } catch (e) {
+    //       // If parsing fails, return the raw match
+    //       return { value: match[1].trim(), newData: newValue };
+    //     }
+    //   }
+    //   return { value: null, newData: dataString };
+    // };
+
+    // Extract fields
+    let result;
+
+    if (classification === '') {
+      result = findAndExtractField("Classification", data);
+      if (result.value !== null) {
+        setClassification(result.value)
+        data = result.newData;
+      }
+    }
+
+    if (confidenceRating === '') {
+      result = findAndExtractField("Confidence Rating", data);
+      if (result.value !== null) {
+        setConfidenceRating(result.value)
+        data = result.newData;
+      }
+    }
+
+    if (rationaleForConfidenceRating === '') {
+      result = findAndExtractField("Rationale for Confidence Rating", data);
+      if (result.value !== null) {
+        setRationaleForConfidenceRating(result.value)
+        data = result.newData;
+      }
+    }
+
+    if (rationaleForClassification === '') {
+      result = findAndExtractField("Rationale for Classification", data);
+      if (result.value !== null) {
+        setRationaleForClassification(result.value)
+        data = result.newData;
+      }
+    }
+
+    if (additionalInformationRequired === '') {
+      result = findAndExtractField("Additional Information Required", data);
+      if (result.value !== null) {
+        setAdditionalInformationRequired(result.value)
+        data = result.newData;
+      }
+    }
+
+    // Return the modified data string
+    return { accumulatedData: data };
+
+    // Extract fields
+    // const fieldsToExtract = [
+    //   "Classification:",
+    //   "Confidence Rating:",
+    //   "Rationale for Confidence Rating:",
+    //   "Rationale for Classification:",
+    //   "Additional Information Required:",
+    // ]
+
+    // let result;
+    // fieldsToExtract.forEach((field, index) => {
+    //   if (streamData.includes(fieldsToExtract[index + 1]) || index === fieldsToExtract.length) {
+    //     result = findAndExtractField(field, streamData);
+    //     console.log(result)
+    //   }
+    // });
+
+    // Return the updated fields and the modified data string
+    // return { ...fields, accumulatedData: data };
+  }
+
+  const handleSubmit = async (e: { preventDefault: () => void; }) => {
+    e.preventDefault();
+
+    console.log("form submission started")
+
+    // Wrap the user input with an additional prompt for FATCA classification
+    const prompt = `
+    Dear ChatGPT,
+
+    To ensure compliance with FATCA regulations, I require your expertise in classifying an entity based on provided details. Your insights are crucial for identifying the correct regulatory requirements. Please response strictly in JSON format.
+
+    1. Classification: Begin by stating your classification of the entity according to FATCA.
+
+    2. Confidence Rating: Next, provide an estimate of your confidence in this classification, expressed as a percentage.
+
+    3. Rationale for Confidence Rating: Explain why you've chosen this confidence rating.
+
+    4. Rationale for Classification: Detail your reasoning behind the classification.
+
+    5. Additional Information Required: If your confidence is below 95%, list all the questions you need answered to potentially increase your confidence above 95%.
+
+    Please avoid saying things like "FATCA is complex". Instead, word it like a professional legal styled response.
+
+    Your clear and sophisticated analysis is greatly appreciated.
+
+    Thank you.
+
+    Here's the relevant information about the entity: \n\n${entityInfo}`;
+
+    fetchAndProcessStream(prompt)
+
+    // if (!stream) {
+    //   // Handle errors here
+    //   console.error('There was an issue with the GPT API request');
+    //   return;
+    // }
+
+    // const data = await response.json();
+    // setClassification(data.choices[0].text.trim());
+
+
+  };
+
+
 
   return (
-    <div className={"flex flex-col w-5/6 mx-auto stretch text-sm " + libreBaskerville.className}>
-      {error != null && (
-        <div className="relative bg-red-500 text-white px-6 py-4 rounded-md">
-          <span className="block sm:inline">
-            Error: {(error as any).toString()}
-          </span>
-        </div>
-      )}
-
-      {messages.map((m: Message) => (
-        <div
-          key={m.id}
-          className="whitespace-pre-wrap"
-          style={{ color: roleToColorMap[m.role] }}
-        >
-          <strong>{`${m.role === "assistant" ? "WealthComplAI" : m.role} `}</strong>
-          {m.role !== 'data' && <Markdown value={m.content.replace(":", "")} />}
-          {m.role === 'data' && (
-            <>
-              {(m.data as any).description}
-              <br />
-              <pre className={'bg-gray-200'}>
-                <Markdown value={JSON.stringify(m.data, null, 2)} />
-              </pre>
-            </>
-          )}
-          <br />
-          <br />
-        </div>
-      ))}
-
-      {status === 'in_progress' && (
-        <div className="h-2/5 w-5/6 p-2 mb-8 bg-gray-300 dark:bg-gray-600 rounded-lg animate-pulse">
-          <p>{loadingMessages[loadingMessageId]}</p>
-        </div>
-      )}
-
-      <br />
-
-      <form onSubmit={submitMessage}>
+    <div>
+      <ClassifyPage
+        classification={classification || "1"}
+        confidenceRating={confidenceRating || "Calculating Confidence Rating..."}
+        rationaleForConfidenceRating={rationaleForConfidenceRating || "Detailing Rationale..."}
+        rationaleForClassification={rationaleForClassification || 'test'}
+        additionalInformationRequired={additionalInformationRequired || "Recommended Next Actions"}
+      ></ClassifyPage>
+      <form onSubmit={handleSubmit}>
+        <label htmlFor="entityInfo">Enter FATCA related information about an entity:</label>
         <textarea
-          ref={textareaRef} // Attach the ref to the textarea
-          disabled={status !== 'awaiting_message'}
-          className="fixed bottom-0 w-5/6 h-1/6 p-2 mb-20 border border-gray-300 rounded shadow-xl"
-          value={input}
-          placeholder="Please copy and paste all your entity information here to receive your FATCA/CRS classification..."
-          onChange={handleInputChange}
-          aria-multiline
-          onSubmit={showLoadingMessages}
-
-        // multiple
-        />
-        <button
-          className="fixed bottom-10 bg-black text-white"
-          onClick={focusTextarea}
-        >
-          Classify the Entity
-        </button>
+          id="entityInfo"
+          value={entityInfo}
+          onChange={(e) => setEntityInfo(e.target.value)}
+          rows={5}
+          required
+        ></textarea>
+        <button type="submit">Submit</button>
       </form>
+      {classification && (
+        <div>
+          <h3>FATCA Classification:</h3>
+          <p>{classification}</p>
+          <p>{confidenceRating}</p>
+          <p>{rationaleForConfidenceRating}</p>
+          <p>{rationaleForClassification}</p>
+          <p>{additionalInformationRequired}</p>
+        </div>
+      )}
     </div>
   );
 }

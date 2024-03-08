@@ -18,11 +18,12 @@ export async function POST(req: Request) {
   const { prompt } = await req.json();
 
   // Ask OpenAI for a streaming completion given the prompt
-  const response = await openai.completions.create({
-    model: 'gpt-3.5-turbo-instruct',
-    max_tokens: 2000,
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4-turbo-preview',
+    // max_tokens: 2000,
     stream: true,
-    prompt,
+    response_format: { "type": "json_object" },
+    messages: [{ role: 'user', content: prompt }],
   });
 
   // optional: use stream data

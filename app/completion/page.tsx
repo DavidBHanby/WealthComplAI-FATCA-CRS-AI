@@ -9,7 +9,7 @@ export default function Chat() {
   return (
     <div className="flex flex-col w-full max-w-md py-24 mx-auto stretch">
       <h4 className="text-xl font-bold text-gray-900 md:text-xl pb-4">
-        useCompletion Example
+        Completion
       </h4>
       {data && (
         <pre className="p-4 text-sm bg-gray-100">

@@ -1,0 +1,35 @@
+{
+  "entity_classification": {
+    "name": "The Foundation",
+    "type": "Panamanian Foundation of Private Interest",
+    "establishment_date": "2004-05-05",
+    "founder_deceased": "2018",
+    "FATCA_status": "Passive NFFE",
+    "reason_for_classification": [
+      "The Foundation receives funds (interest and principal on loans) from Acata AG through Swisspartners.",
+      "It does not primarily engage in a business of investing, reinvesting, or trading in securities, partnership interests, commodities, or any interest (including a futures or forward contract or option) in such securities, partnership interests, or commodities.",
+      "The Foundation is involved in managing an insurance policy and distributing funds to beneficiaries, which is a passive activity."
+    ],
+    "management_changes": {
+      "new_management": [
+        "Consentio",
+        "Vocation",
+        "Third External Individual Party"
+      ],
+      "classification_of_management_entities": "Active NFEs",
+      "implications": "The change in management to entities classified as Active NFEs does not alter the FATCA classification of The Foundation"
+    },
+    "financial_accounts": {
+      "future_plans": "Opening a bank account for The Foundation",
+      "relevance": "This is relevant for FATCA purposes for identification and reporting requirements of the financial institution with which the account is held."
+    }
+  }
+}
+
+[
+    "Detail the primary activities and operations of The Foundation apart from the management of the life insurance policy and loans.",
+    "Clarify whether The Foundation, under its new management, plans to engage in any business activities or will continue primarily managing investments and receiving passive income.",
+    "Provide information on any other sources of income for The Foundation, including whether it holds any financial accounts or assets directly and the nature of these assets.",
+    "Explain the role and function of the third external individual party in the new management structure and how this might affect the entity’s operations or income sources.",
+    "State whether The Foundation has any other affiliations with financial institutions or if it performs any role that could be construed as providing financial services."
+]
