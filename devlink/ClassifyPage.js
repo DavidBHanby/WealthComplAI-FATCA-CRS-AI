@@ -133,7 +133,7 @@ export function ClassifyPage({
               className={_utils.cx(_styles, "text-block-4")}
               tag="div"
             >
-              {"Recommended Next Actions"}
+              {"Recommended Next Actions - Supplementary Information Required"}
             </_Builtin.Block>
             <_Builtin.Block
               className={_utils.cx(_styles, "text-block-2")}
