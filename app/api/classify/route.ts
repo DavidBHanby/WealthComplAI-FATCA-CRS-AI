@@ -9,7 +9,11 @@ const openai = new OpenAI({
 // IMPORTANT! Set the runtime to edge
 export const runtime = 'edge';
 
-export async function POST(req: Request) {
+export async function POST(req: Request, res: Response) {
+  // Set CORS headers
+  // res.setHeader() sets response headers. 'Access-Control-Allow-Origin' header allows all domains to access your API
+  // res.setHeader('Access-Control-Allow-Origin', '*');
+
   // Extract the `prompt` from the body of the request
   const {prompt} = await req.json();
 
