@@ -1,4 +1,6 @@
 .div-block {
+  height: 100%;
+  min-height: 100vh;
   background-image: url("https://uploads-ssl.webflow.com/65e8b95453cd49f7d44ef142/65e9efcb2007ce9fef34085a_white-marble-bg.jpg");
   background-position: 0px 0px;
   background-size: cover;
@@ -32,6 +34,12 @@
   padding-top: 0px;
   grid-column-gap: 4px;
   grid-row-gap: 4px;
+}
+
+.text-block-4 {
+  font-size: 17px;
+  font-weight: 400;
+  text-transform: none;
 }
 
 .classification {
@@ -71,7 +79,7 @@
   box-shadow: 0 2px 5px 0 rgba(0,0,0,0.2);
 
   color: hsla(228, 0.00%, 40.67%, 1.00);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .confidence-rating {
@@ -108,7 +116,7 @@
   box-shadow: 0 2px 5px 0 rgba(0,0,0,0.2);
 
   color: hsla(0, 0.00%, 40.78%, 1.00);
-  font-size: 12px;
+  font-size: 14px;
   -webkit-text-stroke-color: hsla(0, 0.00%, 40.78%, 1.00);
 }
 

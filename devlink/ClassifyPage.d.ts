@@ -8,4 +8,5 @@ declare function ClassifyPage(props: {
   rationaleForClassification?: React.ReactNode;
   rationaleForConfidenceRating?: React.ReactNode;
   additionalInformationRequired?: React.ReactNode;
+  userInputSection?: Types.Devlink.Slot;
 }): React.JSX.Element;
