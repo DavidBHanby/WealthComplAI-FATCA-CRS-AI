@@ -14,7 +14,7 @@ const libreBaskerville = Libre_Baskerville({
 
 // Create an OpenAI API client (that's edge friendly!)
 const openai = new OpenAI({
-  apiKey: "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" || '',
+  apiKey: "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" || '',
   dangerouslyAllowBrowser: true
 });
 
