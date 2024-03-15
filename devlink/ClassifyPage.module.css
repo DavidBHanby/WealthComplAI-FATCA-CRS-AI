@@ -120,19 +120,8 @@
   -webkit-text-stroke-color: hsla(0, 0.00%, 40.78%, 1.00);
 }
 
-.text-block-2 {
-  padding: 20px;
-
-  border-style: none;
-  border-width: 1px;
-  border-color: hsla(134, 100.00%, 97.33%, 1.00);
-  border-radius: 7px;
-
-  background-color: hsla(211, 100.00%, 93.56%, 1.00);
-
-  box-shadow: 0 2px 5px 0 rgba(0,0,0,0.2);
-
-  font-size: 14px;
+.cell-2 {
+  padding-top: 20px;
 }
 
 #w-node-_95db12a6-2625-b19b-7ead-a9f68dc56931-8dc5692f {

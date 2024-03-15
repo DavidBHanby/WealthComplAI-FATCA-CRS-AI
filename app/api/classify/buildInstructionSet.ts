@@ -1,12 +1,12 @@
-
-
-const promptBase = `Dear ChatGPT,
+export function buildInstructionSet(prompt: any) {
+  return `
+    Dear ChatGPT,
 
     To ensure compliance with FATCA regulations, I require your expertise in classifying an entity based on provided details. Your insights are crucial for identifying the correct regulatory requirements. Please respond strictly in JSON format.
 
     1. Classification: Begin by stating your classification of the entity according to FATCA.
 
-    2. Confidence Rating: Next, provide a conservative estimate of your confidence in this classification, expressed as a percentage. Bearing in mind that if the classification is not fairly clear, e.g. you think is could be X or Y, then the confidence in a specific classification is lacking, so the rating should effectively be 0%!
+    2. Confidence Rating: Next, provide an estimate of your confidence in this classification, expressed as a percentage.
 
     3. Rationale for Confidence Rating: Explain why you've chosen this confidence rating.
 
@@ -20,6 +20,5 @@ const promptBase = `Dear ChatGPT,
 
     Thank you.
 
-    Here's the relevant information about the entity: \n\n`
-
-export default promptBase
+    Here's the relevant information about the entity: \n\n${prompt}`;
+}

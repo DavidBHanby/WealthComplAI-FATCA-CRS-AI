@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { FormEvent, JSXElementConstructor, PromiseLikeOfReactNode, ReactElement, ReactFragment, useEffect, useRef, useState } from 'react';
 //import OpenAI from 'openai';
 
 import { useCompletion } from 'ai/react';
@@ -8,43 +8,17 @@ import { useCompletion } from 'ai/react';
 import { ClassifyPage } from '@/devlink';
 
 import { Libre_Baskerville } from 'next/font/google';
+import { loadingMessages } from './loadingMessages';
+import { findAndExtractField } from './findAndExtractField';
+
+import QuestionAnswerComponent from '@/app/classify/QuestionAnswerComponent';
+
+// import { additionalInfoResponseBlock } from './additionalInfoResponseBlock';
 
 const libreBaskerville = Libre_Baskerville({
   subsets: ['latin'],
   weight: '400',
 });
-
-// Create an OpenAI API client (that's edge friendly!)
-// const openai = new OpenAI({
-//   dangerouslyAllowBrowser: true
-// });
-
-
-const loadingMessages = [
-  "Reviewing provided information...",
-
-  "Considering all relevant international regulations...",
-
-  "Delving into the FATCA/CRS regulations...",
-
-  "Parsing intricate details of compliance laws...",
-
-  "Cross-referencing entity data with current compliance standards...",
-
-  "Comparing entity information against up-to-date regulatory requirements...",
-
-  "Evaluating entity structure...",
-
-  "Considering the latest amendments to the regulations...",
-
-  "Developing classification rationale...",
-
-  "Further analysing financial activities and relationships...",
-
-  "Preparing actionable insights and recommendations...",
-
-  "Finalizing report to provide bespoke compliance roadmap..."
-]
 
 // IMPORTANT! Set the runtime to edge
 export const runtime = 'edge';
@@ -57,9 +31,26 @@ export default function FATCAForm() {
   const [confidenceRating, setConfidenceRating] = useState('');
   const [rationaleForConfidenceRating, setRationaleForConfidenceRating] = useState('');
   const [rationaleForClassification, setRationaleForClassification] = useState('');
-  const [additionalInformationRequired, setAdditionalInformationRequired] = useState('');
+  const [additionalInformationRequired, setAdditionalInformationRequired] = useState<string[]>([]
+    // [
+    //   "Please provide detailed information on the specific financial activities conducted by the company.",
+    //   "Clarify the legal structure and the jurisdiction of incorporation or establishment of the entity.",
+    //   "Detail the ownership structure to assess potential US person control or significant ownership.",
+    //   "Specify if the entity accepts deposits in the course of a banking or similar business.",
+    //   "Indicate whether the entity holds financial assets for the account of others as a substantial portion of its business.",
+    //   "Confirm if the entity is engaged primarily in the business of investing, reinvesting, or trading in securities, partnership interests, commodities, or any related interests.",
+    //   "Information regarding any existing FATCA classifications or certifications the entity might have previously obtained."
+    // ]
+  );
 
-  const { completion, input, handleInputChange, handleSubmit, error, data, isLoading } = useCompletion({
+  // Initialize state to store answers. It's an object with question as key and answer as value
+  const [answers, setAnswers] = useState({});
+
+  const [previousSubmission, setPreviousSubmission] = useState('')
+
+  // const inputRef = useRef(null)
+
+  const { completion, input, setInput, handleInputChange, handleSubmit, error, data, isLoading } = useCompletion({
     api: '/api/classify',
   });
 
@@ -79,54 +70,20 @@ export default function FATCAForm() {
     } catch (error) {
       // Handle JSON parsing errors, which are expected for partial data
       // You might not need to do anything here if errors are solely due to partial JSON
-      console.error('Parsing error, possibly due to partial data. Waiting for more data...');
+      console.error('Parsing error, possibly due to partial data. Retrying...');
     }
-    console.log(loadingMessageId, " - inside", loadingMessages.length)
 
   } else {
     if (loadingMessageId !== 0) setLoadingMessageId(0)
   }
 
   const submitUserInput = () => {
-    console.log("form submission started")
-    // setIsProcessing(true);
+    // console.log("form submission started")
   }
 
   function extractFields(data: string) {
 
     // Function to find and extract a field's value from the data string
-    const findAndExtractField = (fieldName: string, dataString: string) => {
-      // Regex pattern to match the field name and its complete value, regardless of type
-      // This pattern captures:
-      // - Quoted field names
-      // - Followed by optional spaces, a colon, and optional spaces
-      // - The field value, which can be a quoted string, number, object, array, true, false, or null
-      const regexPattern = new RegExp(`"${fieldName}"\\s*:\\s*((".*?"|\\d+(\\.\\d+)?|true|false|null|\\[.*?\\]|\\{.*?\\}))\\s*(,|}$)`, 's');
-      const match = regexPattern.exec(dataString);
-
-      if (match && match[1]) {
-        // Extracted value
-        let value = match[1].trim();
-
-        // Attempt to parse the extracted value to handle strings, numbers, booleans, nulls, arrays, and objects
-        try {
-          value = JSON.parse(value);
-        } catch (e) {
-          // If parsing fails, it could be due to malformed JSON or incomplete streaming. Since we're focusing on complete data, this case should be rare.
-          console.error('Failed to parse field value:', e);
-          return { value: null, newData: dataString };
-        }
-
-        // Remove the matched portion from the data string to avoid reprocessing
-        const newData = dataString.substring(0, match.index) + dataString.substring(match.index + match[0].length);
-
-        return { value, newData };
-      }
-
-      // If no complete field is found, return null value and original data
-      return { value: null, newData: dataString };
-    }
-
     // Extract fields
     let result;
 
@@ -162,68 +119,149 @@ export default function FATCAForm() {
       }
     }
 
-    if (additionalInformationRequired === '') {
+    if (additionalInformationRequired.length === 0) {
       result = findAndExtractField("Additional Information Required", data);
       if (result.value !== null) {
-        setAdditionalInformationRequired(result.value)
-        data = result.newData;
+        // console.log(result.value, ' << raw result ')
+        // const parsed = JSON.parse(result.value.replace(/'/g, '"'));
+        // if (typeof parsed === "object") {
+        //   console.log(parsed, ' << parsed ... and is object ')
+        // }
+        // const parsedValue = JSON.parse(result.value)
+        // console.log(parsedValue, ' << parsedValue')
+
+        // const reset = result.value
+
+        setAdditionalInformationRequired(result.value) // || JSON.parse(result.value) || result.value.split(",")
+        // data = result.newData;
       }
     }
 
-    // Return the modified data string
-    return { accumulatedData: data };
-
+    return true
   }
+
+  // useEffect(() => {
+  //   const test = JSON.parse(`[
+  //     "What is the primary business activity of the company?",
+  //     "In which country is the company incorporated or organized?",
+  //     "Does the company hold financial accounts or financial assets for others?",
+  //     "Is the company engaged in the business of banking or investments?",
+  //     "What is the ownership structure of the company?",
+  //     "Does the company receive payments from U.S. sources?",
+  //     "Is the company already registered with the IRS for FATCA compliance, and if so, what is its GIIN (Global Intermediary Identification Number)?"
+  //   ]`)
+
+  //   setAdditionalInformationRequired(test)
+  // }, []);
+
+
+
+  // Handle changing of any answer
+  const handleAnswerChange = (question: any, answer: any) => {
+    setAnswers(prevAnswers => ({
+      ...prevAnswers,
+      [question]: answer,
+    }));
+
+    setInput(previousSubmission + ' \n \n Further Information: ' + JSON.stringify(answers))
+
+  };
+
+  // Example function to submit answers
+  const handleNewSubmit = (event: FormEvent<HTMLFormElement> | undefined) => {
+    // Here you could send `answers` to your API
+    // console.log('Submitting additional information:', answers);
+
+    // console.log(event, ' << event')
+
+    // console.log(input, ' << input')
+
+
+
+    handleSubmit(event)
+
+    const value = event?.target
+
+    // console.log(value, ' << value')
+
+    setPreviousSubmission(input)
+
+    setClassification('')
+    setConfidenceRating('')
+    setRationaleForConfidenceRating('')
+    setRationaleForClassification('')
+    setAdditionalInformationRequired([])
+
+  };
 
   return (
     <div className={libreBaskerville.className}>
-      {/* <p>{completion}</p>
-      <div>
-        <h3>FATCA Classification:</h3>
-        <p>{classification}</p>
-        <p>{confidenceRating}</p>
-        <p>{rationaleForConfidenceRating}</p>
-        <p>{rationaleForClassification}</p>
-        <p>{additionalInformationRequired}</p>
-      </div> */}
-
+      {/* <p>{JSON.stringify(answers)}</p>
+      <p>{previousSubmission}</p> */}
       <ClassifyPage
         classification={classification} // || loadingMessageId === 0 && classification === '' ? "" : "Processing classification..."}
         confidenceRating={confidenceRating} //  || loadingMessageId === 0 && confidenceRating === '' ? "" : "Calculating confidence rating..."}
         rationaleForConfidenceRating={rationaleForConfidenceRating} //  || loadingMessageId === 0 && rationaleForConfidenceRating === '' ? "" : "Detailing Rationale..."}
         rationaleForClassification={rationaleForClassification} //  || loadingMessageId === 0 && rationaleForClassification === '' ? "" : 'Mapping reasoning...'}
-        additionalInformationRequired={additionalInformationRequired} //  || loadingMessageId === 0 && additionalInformationRequired === '' ? "" : "Determining best next actions"}
+        additionalInformationRequired={
+          <>
+            {/* {additionalInformationRequired.map((requiredAction, index) => <QuestionAnswerComponent question={requiredAction} key={index} />)} */}
+
+            <form onSubmit={(e) => {
+              e.preventDefault(); // Prevent default form submission behaviour
+              handleNewSubmit(e);
+            }}>
+              {additionalInformationRequired.map((question, index) => (
+                <div key={index}>
+                  <QuestionAnswerComponent
+                    question={question}
+                    answer={answers[question]}
+                    onAnswerChange={(e) => handleAnswerChange(question, e.target.value)}
+                  />
+                </div>
+              ))}
+              {/* <button type="submit">Submit Answers</button> */}
+            </form>
+
+          </>
+        } //  || loadingMessageId === 0 && additionalInformationRequired === '' ? "" : "Determining best next actions"}
         userInputSection={
           <>
-            {loadingMessageId > 0 && loadingMessageId <= 14  && (
+            {loadingMessageId > 0 && loadingMessageId <= 14 && (
               <div className="h-2/5 w-5/6 p-2 mb-8 bg-gray-300 dark:bg-gray-600 rounded-lg animate-pulse">
                 <p>{loadingMessages[loadingMessageId]}</p>
               </div>
             )}
 
-            <form onSubmit={handleSubmit}>
-              <textarea
-                id="entityInfo"
-                value={input}
-                // value={entityInfo}
-                // ref={textareaRef} // Attach the ref to the textarea
-                // disabled={status !== 'awaiting_message'}
-                className="h-3/6 w-11/12 p-2 m-5 border border-gray-300 rounded shadow-xl"
-                placeholder="Please copy and paste all your entity information here to receive your FATCA classification..."
-                onChange={handleInputChange}
-                // onChange={(e) => setEntityInfo(e.target.value)}
-                rows={8}
-                required
-                aria-multiline
-              // multiple
-              />
+            <form onSubmit={(e) => {              handleNewSubmit(e)            }}>
+              {
+                // classification === '' || true &&
+                <textarea
+                  // ref="inputRef"
+                  id="entityInfo"
+                  value={input}
+                  // value={entityInfo}
+                  // ref={textareaRef} // Attach the ref to the textarea
+                  // disabled={status !== 'awaiting_message'}
+                  hidden={previousSubmission !== ''}
+                  style={{ width: '96%' }}
+                  className="h-3/6 p-2 m-5 border border-gray-300 rounded shadow-xl"
+                  placeholder="Please copy and paste all your entity information here to receive your FATCA classification..."
+                  onChange={handleInputChange}
+                  // onChange={(e) => setEntityInfo(e.target.value)}
+                  rows={8}
+                  required
+                  aria-multiline
+                // multiple
+                />
+              }
               <button
                 className="p-2 mr-5 bg-black text-white rounded-lg float-right"
                 // onClick={focusTextarea}
                 onClick={() => submitUserInput()}
                 type="submit"
               >
-                Classify the Entity
+                {classification === '' ? "Classify the Entity" : "Reclassify the Entity"}
               </button>
             </form>
           </>
@@ -231,67 +269,6 @@ export default function FATCAForm() {
         }
       />
 
-
-      {/* <form onSubmit={handleSubmit}>
-        <label htmlFor="entityInfo">Enter FATCA related information about an entity:</label>
-        <textarea
-          id="entityInfo"
-          value={entityInfo}
-          onChange={(e) => setEntityInfo(e.target.value)}
-          rows={5}
-          required
-        ></textarea>
-        <button type="submit">Submit</button>
-      </form> */}
-
     </div>
   );
 }
-
-
-
-// async function fetchAndProcessStream(prompt: string) {
-
-// try {
-//   const stream = await openai.chat.completions.create({
-//     model: 'gpt-4-turbo-preview',
-//     messages: [{ role: 'user', content: prompt }],
-//     response_format: { "type": "json_object" },
-//     stream: true,
-//   });
-
-// for await (const chunk of stream) {
-//   const chunkContent = chunk.choices[0]?.delta?.content || '';
-//   //console.log(chunkContent);
-//   accumulatedData += chunkContent;
-
-//   try {
-//     // Attempt to extract and update variables with complete fields as they become available
-
-//     // ({ accumulatedData } =
-//     extractFields(accumulatedData)
-
-//   } catch (error) {
-//     // Handle JSON parsing errors, which are expected for partial data
-//     // You might not need to do anything here if errors are solely due to partial JSON
-//     console.error('Parsing error, possibly due to partial data. Waiting for more data...');
-//   }
-// }
-
-// Once streaming is complete, or as data is processed, you can use the variables as needed
-
-// console.log(accumulatedData)
-
-// console.log(
-//   'Classification:', classification,
-//   'Confidence Rating:', confidenceRating,
-//   'Rationale for Confidence Rating:', rationaleForConfidenceRating,
-//   'Rationale for Classification:', rationaleForClassification,
-//   'Additional Information Required:', additionalInformationRequired
-// )
-
-// } catch (error) {
-//   console.error('Error with streaming:', error);
-// }
-
-// }

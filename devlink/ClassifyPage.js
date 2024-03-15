@@ -9,8 +9,9 @@ export function ClassifyPage({
   classification = "Loading...",
   rationaleForClassification = "...",
   rationaleForConfidenceRating = "...",
-  additionalInformationRequired = "",
+  dd = "",
   userInputSection,
+  additionalInformationRequired,
 }) {
   return (
     <_Component className={_utils.cx(_styles, "div-block")} tag="div">
@@ -124,6 +125,7 @@ export function ClassifyPage({
             </_Builtin.Block>
           </_Builtin.Cell>
           <_Builtin.Cell
+            className={_utils.cx(_styles, "cell-2")}
             id={_utils.cx(
               _styles,
               "w-node-_95db12a6-2625-b19b-7ead-a9f68dc5694f-8dc5692f"
@@ -135,10 +137,7 @@ export function ClassifyPage({
             >
               {"Recommended Next Actions - Supplementary Information Required"}
             </_Builtin.Block>
-            <_Builtin.Block
-              className={_utils.cx(_styles, "text-block-2")}
-              tag="div"
-            >
+            <_Builtin.Block tag="div">
               {additionalInformationRequired}
             </_Builtin.Block>
           </_Builtin.Cell>
