@@ -29,7 +29,14 @@ const styles = {
   },
 };
 
-const QuestionAnswerComponent = ({ question, answer, onAnswerChange }) => {
+// Define the props for the component using an interfacev
+interface QuestionAnswerComponentProps {
+  question: string;
+  answer: string;
+  onAnswerChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+}
+
+const QuestionAnswerComponent: React.FC<QuestionAnswerComponentProps> = ({ question, answer, onAnswerChange }) => {
   return (
     <div style={styles.container}>
       <div style={styles.questionBox}>
