@@ -10,17 +10,7 @@ export const findAndExtractField = (fieldName: string, dataString: string) => {
 
   if (match && match[1]) {
     // Extracted value
-    let value = match[1].trim();
-
-    // Attempt to parse the extracted value to handle strings, numbers, booleans, nulls, arrays, and objects
-    try {
-      value = JSON.parse(value);
-      console.log(value, ' < value 1 ... and value type = ', typeof value)
-    } catch (e) {
-      // If parsing fails, it could be due to malformed JSON or incomplete streaming. Since we're focusing on complete data, this case should be rare.
-      console.error('Failed to parse field value:', e);
-      return { value: null, newData: dataString };
-    }
+    let value: string = match[1].trim();
 
     // Remove the matched portion from the data string to avoid reprocessing
     let newData = ''

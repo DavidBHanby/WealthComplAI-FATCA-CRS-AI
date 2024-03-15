@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, JSXElementConstructor, PromiseLikeOfReactNode, ReactElement, ReactFragment, useEffect, useRef, useState } from 'react';
+import { FormEvent, useState } from 'react';
 //import OpenAI from 'openai';
 
 import { useCompletion } from 'ai/react';
@@ -44,7 +44,8 @@ export default function FATCAForm() {
   );
 
   // Initialize state to store answers. It's an object with question as key and answer as value
-  const [answers, setAnswers] = useState({});
+  // const [answers, setAnswers] = useState({});
+  const [answers, setAnswers] = useState<{ [question: string]: string }>({});
 
   const [previousSubmission, setPreviousSubmission] = useState('')
 
@@ -54,12 +55,14 @@ export default function FATCAForm() {
     api: '/api/classify',
   });
 
+  let loadingMsgsInterval
+
   if (isLoading) {
 
     if (loadingMessageId === 0) {
-      const loadingMsgsInterval = setInterval(() => {
+      loadingMsgsInterval = setInterval(() => {
         setLoadingMessageId((oldCount) => oldCount + 1)
-      }, 1000);
+      }, 1300);
 
       if (loadingMessageId >= loadingMessages.length) clearInterval(loadingMsgsInterval)
     }
@@ -73,7 +76,10 @@ export default function FATCAForm() {
       console.error('Parsing error, possibly due to partial data. Retrying...');
     }
 
+
+
   } else {
+    clearInterval(loadingMsgsInterval)
     if (loadingMessageId !== 0) setLoadingMessageId(0)
   }
 
@@ -90,7 +96,7 @@ export default function FATCAForm() {
     if (classification === '') {
       result = findAndExtractField("Classification", data);
       if (result.value !== null) {
-        setClassification(result.value)
+        setClassification(JSON.parse(result.value))
         data = result.newData;
       }
     }
@@ -98,7 +104,7 @@ export default function FATCAForm() {
     if (confidenceRating === '') {
       result = findAndExtractField("Confidence Rating", data);
       if (result.value !== null) {
-        setConfidenceRating(result.value)
+        setConfidenceRating(JSON.parse(result.value))
         data = result.newData;
       }
     }
@@ -106,7 +112,7 @@ export default function FATCAForm() {
     if (rationaleForConfidenceRating === '') {
       result = findAndExtractField("Rationale for Confidence Rating", data);
       if (result.value !== null) {
-        setRationaleForConfidenceRating(result.value)
+        setRationaleForConfidenceRating(JSON.parse(result.value))
         data = result.newData;
       }
     }
@@ -114,7 +120,7 @@ export default function FATCAForm() {
     if (rationaleForClassification === '') {
       result = findAndExtractField("Rationale for Classification", data);
       if (result.value !== null) {
-        setRationaleForClassification(result.value)
+        setRationaleForClassification(JSON.parse(result.value))
         data = result.newData;
       }
     }
@@ -122,17 +128,17 @@ export default function FATCAForm() {
     if (additionalInformationRequired.length === 0) {
       result = findAndExtractField("Additional Information Required", data);
       if (result.value !== null) {
-        // console.log(result.value, ' << raw result ')
-        // const parsed = JSON.parse(result.value.replace(/'/g, '"'));
-        // if (typeof parsed === "object") {
-        //   console.log(parsed, ' << parsed ... and is object ')
-        // }
-        // const parsedValue = JSON.parse(result.value)
-        // console.log(parsedValue, ' << parsedValue')
+        let questions: Array<string> = []
+        // Attempt to parse the extracted value to handle strings, numbers, booleans, nulls, arrays, and objects
+        try {
+          questions = JSON.parse(result.value);
+          console.log(result.value, ' < value 1 ... and value type = ', typeof result.value)
+        } catch (e) {
+          // If parsing fails, it could be due to malformed JSON or incomplete streaming. Since we're focusing on complete data, this case should be rare.
+          console.error('Failed to parse field value:', e);
+        }
 
-        // const reset = result.value
-
-        setAdditionalInformationRequired(result.value) // || JSON.parse(result.value) || result.value.split(",")
+        setAdditionalInformationRequired(questions) // || JSON.parse(result.value) || result.value.split(",")
         // data = result.newData;
       }
     }
@@ -140,52 +146,22 @@ export default function FATCAForm() {
     return true
   }
 
-  // useEffect(() => {
-  //   const test = JSON.parse(`[
-  //     "What is the primary business activity of the company?",
-  //     "In which country is the company incorporated or organized?",
-  //     "Does the company hold financial accounts or financial assets for others?",
-  //     "Is the company engaged in the business of banking or investments?",
-  //     "What is the ownership structure of the company?",
-  //     "Does the company receive payments from U.S. sources?",
-  //     "Is the company already registered with the IRS for FATCA compliance, and if so, what is its GIIN (Global Intermediary Identification Number)?"
-  //   ]`)
-
-  //   setAdditionalInformationRequired(test)
-  // }, []);
-
-
-
   // Handle changing of any answer
-  const handleAnswerChange = (question: any, answer: any) => {
+  const handleAnswerChange = (question: string, answer: string) => {
     setAnswers(prevAnswers => ({
       ...prevAnswers,
       [question]: answer,
     }));
-
     setInput(previousSubmission + ' \n \n Further Information: ' + JSON.stringify(answers))
-
   };
 
   // Example function to submit answers
-  const handleNewSubmit = (event: FormEvent<HTMLFormElement> | undefined) => {
-    // Here you could send `answers` to your API
-    // console.log('Submitting additional information:', answers);
-
-    // console.log(event, ' << event')
-
-    // console.log(input, ' << input')
-
-
+  const handleNewSubmit = (event: FormEvent<HTMLFormElement>) => {
 
     handleSubmit(event)
-
-    const value = event?.target
-
-    // console.log(value, ' << value')
-
     setPreviousSubmission(input)
 
+    // Reset the state for the results ready for new results
     setClassification('')
     setConfidenceRating('')
     setRationaleForConfidenceRating('')
@@ -199,7 +175,7 @@ export default function FATCAForm() {
       {/* <p>{JSON.stringify(answers)}</p>
       <p>{previousSubmission}</p> */}
       <ClassifyPage
-        classification={classification} // || loadingMessageId === 0 && classification === '' ? "" : "Processing classification..."}
+        classification={classification}  // isLoading && classification === '' ? classification : "Determining classification..."}
         confidenceRating={confidenceRating} //  || loadingMessageId === 0 && confidenceRating === '' ? "" : "Calculating confidence rating..."}
         rationaleForConfidenceRating={rationaleForConfidenceRating} //  || loadingMessageId === 0 && rationaleForConfidenceRating === '' ? "" : "Detailing Rationale..."}
         rationaleForClassification={rationaleForClassification} //  || loadingMessageId === 0 && rationaleForClassification === '' ? "" : 'Mapping reasoning...'}
@@ -226,14 +202,15 @@ export default function FATCAForm() {
           </>
         } //  || loadingMessageId === 0 && additionalInformationRequired === '' ? "" : "Determining best next actions"}
         userInputSection={
-          <>
+          <div style={{ paddingBottom: 100 }}>
+
             {loadingMessageId > 0 && loadingMessageId <= 14 && (
-              <div className="h-2/5 w-5/6 p-2 mb-8 bg-gray-300 dark:bg-gray-600 rounded-lg animate-pulse">
+              <div style={{ width: '96%' }} className="h-2/5 p-2 m-5 mb-8 bg-gray-300 dark:bg-gray-600 rounded-lg animate-pulse">
                 <p>{loadingMessages[loadingMessageId]}</p>
               </div>
             )}
 
-            <form onSubmit={(e) => {              handleNewSubmit(e)            }}>
+            <form onSubmit={(e) => {handleNewSubmit(e)}}>
               {
                 // classification === '' || true &&
                 <textarea
@@ -260,15 +237,17 @@ export default function FATCAForm() {
                 // onClick={focusTextarea}
                 onClick={() => submitUserInput()}
                 type="submit"
+                disabled={isLoading}
               >
-                {classification === '' ? "Classify the Entity" : "Reclassify the Entity"}
+                {isLoading ? "Processing..." :
+                  previousSubmission === '' ?
+                    "Classify the Entity" : "Reclassify the Entity"}
               </button>
             </form>
-          </>
+          </div>
 
         }
       />
-
     </div>
   );
 }

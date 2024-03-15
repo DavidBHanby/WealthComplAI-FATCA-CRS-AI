@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 // CSS styles
 const styles = {
@@ -37,6 +37,7 @@ interface QuestionAnswerComponentProps {
 }
 
 const QuestionAnswerComponent: React.FC<QuestionAnswerComponentProps> = ({ question, answer, onAnswerChange }) => {
+  // const [test, setTest] = useState()
   return (
     <div style={styles.container}>
       <div style={styles.questionBox}>
